@@ -1,0 +1,12 @@
+[Unit]
+Description=UDP Ethernet Tunnel Service
+After=network.target
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/udp-eth-tunnel /etc/udp-eth-tunnel.conf
+;Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
