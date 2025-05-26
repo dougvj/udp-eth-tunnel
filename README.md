@@ -11,7 +11,8 @@ wireguard.
 
 The utility is similar in concept to OpenVPN's TAP mode with crypto disabled,
 but with the notable difference that instead of a single TAP interface per
-tunnel, it creates a TAP interface for each endpoint and adds them to a bridge.
+tunnel, it creates a TAP interface for each endpoint and adds them to a bridge, 
+letting the kernel handle packet switching.
 
 ## Features
 
@@ -104,10 +105,11 @@ tap_base_name = tap ; The base name for the tap interfaces. The default is 'tap'
                   ; names, so multiple tunnels can use the same base name or you
                   ; can simply use the default and all endpoint tap interfaces
                   ; will use tapN
+```
+
 ## Examples
 
-### Example 1: A single host with two bridge interfaces that share layer 2
-               via this utility, simulating a veth pair
+### Example 1: A single host with two bridge interfaces that share layer 2 via this utility, simulating a veth pair
 
 Obviously a real veth pair in kernel is always a better option, this is just
 for demonstration purposes.
@@ -135,7 +137,7 @@ ping -I fakeveth1 10.0.0.2
 
 ### Example 2: A single host acts as a central switch that other hosts connect to
 
-This example creates a single host that acts as an ethernet switch for multiple
+This example creates a single host that acts as a 'ethernet switch' for multiple
 remote hosts.  Note that the section names are omitted, so both configurations
 adopt the 'default' section name
 
@@ -143,7 +145,7 @@ adopt the 'default' section name
 ; Config on central host
 bind_iface=wg0; assume we are 10.10.10.1
 bind_port=1234
-allowed_remote_hosts=10.10.10.0/24
+allowed_remote_hosts=10.10.10.0/24 ; Allow anyone in 10.10.10.x
 ```
 
 ```ini
