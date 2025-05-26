@@ -19,3 +19,8 @@ cc = meson.get_compiler('c')
 # for compatibility with older versions we need to use libbsd
 libbsd = cc.find_library('bsd')
 executable('udp-eth-tunnel', src, install: true, dependencies: [libbsd])
+
+# Install the systemd service file
+install_data('systemd/udp-eth-tunnel.service',
+              install_dir: get_option('systemd_system_unitdir'),
+              install_mode: 'r--r--r--')

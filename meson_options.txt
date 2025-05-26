@@ -1,0 +1,3 @@
+option('systemd_system_unitdir', type : 'string',
+  value : '/etc/systemd/system',
+  description : 'Path to systemd system unit directory')
