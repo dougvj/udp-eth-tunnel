@@ -492,7 +492,7 @@ tunnel* tunnel_create(tunnel_params* params) {
   }
   memset(t, 0, sizeof(tunnel));
   pthread_rwlock_init(&t->mutex, NULL);
-  t->name = strdup(params->tunnel_name);
+  t->name = must_strdup(params->tunnel_name);
   int num_queues = params->num_queues;
   if (num_queues == 0) {
     num_queues = sysconf(_SC_NPROCESSORS_ONLN);
@@ -527,12 +527,12 @@ tunnel* tunnel_create(tunnel_params* params) {
         "the wireguard interface by default. See README)");
   }
   if (params->tap_base_name) {
-    t->tap_base_name = strdup(params->tap_base_name);
+    t->tap_base_name = must_strdup(params->tap_base_name);
   }
   if (params->bridge_name) {
-    t->bridge_name = strdup(params->bridge_name);
+    t->bridge_name = must_strdup(params->bridge_name);
   } else {
-    asprintf((char**)&t->bridge_name, "br-%s", t->name);
+    must_asprintf((char**)&t->bridge_name, "br-%s", t->name);
   }
   t->epoll_fd = setup_epollfd(t);
   if (t->epoll_fd < 0) {
