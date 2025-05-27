@@ -24,6 +24,7 @@ if not cc.has_function('strlcpy', prefix: '#include <string.h>') or not cc.has_f
   warning('strlcpy and strlcat not found, using libbsd')
   libbsd = cc.find_library('bsd')
   deps += [libbsd]
+  add_project_arguments('-DUSE_LIBBSD', language: 'c')
 endif
 executable('udp-eth-tunnel', src, install: true, dependencies: deps)
 
