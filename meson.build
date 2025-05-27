@@ -1,7 +1,7 @@
 # Switch to gnu23 when more systems are updated
 project('udp-eth-tunnel', 'c',
         version: '2025.5.26',
-        default_options: ['c_std=gnu2x', 'warning_level=2', 'buildtype=debugoptimized', 'werror=true'])
+        default_options: ['c_std=gnu99', 'warning_level=2', 'buildtype=release', 'werror=true'])
 
 src = [
   'src/main.c',
