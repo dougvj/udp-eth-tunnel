@@ -151,6 +151,27 @@ declare_defer_func(pthread_rwlock_unlock, pthread_rwlock_t*);
 
 #define pthread_rwlock_scope_wrlock(rwlock) \
   pthread_rwlock_t* __to_unlock_ ##__LINE__ defer(pthread_rwlock_unlock) = rwlock; \
-  pthread_rwlock_wrlock(rwlock); \
+  pthread_rwlock_wrlock(rwlock);
 
+// The following are wrappers around strdup and asprintf that basically
+// panic if they fail. We don't really want to try to proceed on failure
+// when we use these functions
+#define must_strdup(str)      \
+  ({                          \
+    char* _str = strdup(str); \
+    if (!_str) {              \
+      perror("strdup");       \
+      exit(EXIT_FAILURE);     \
+    }                         \
+    _str;                     \
+  })
 
+#define must_asprintf(str, fmt, ...)             \
+  ({                                             \
+    char* _str;                                  \
+    if (asprintf(&_str, fmt, __VA_ARGS__) < 0) { \
+      perror("asprintf");                        \
+      exit(EXIT_FAILURE);                        \
+    }                                            \
+    _str;                                        \
+  })

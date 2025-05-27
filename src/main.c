@@ -49,11 +49,11 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
     parse_state->seen_values = true;
     LOG_DEBUG("Key: %s, Value: %s", key, value);
     if (strcmp(key, "bind_iface") == 0) {
-      params->bind_iface = strdup(value);
+      params->bind_iface = must_strdup(value);
     } else if (strcmp(key, "bind_port") == 0) {
       params->bind_port = atoi(value);
     } else if (strcmp(key, "default_endpoint") == 0) {
-      params->default_remote_host = strdup(value);
+      params->default_remote_host = must_strdup(value);
       char * colon = strchr(params->default_remote_host, ':');
       if (colon != NULL) {
         *colon = '\0';
@@ -65,13 +65,13 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
     } else if (strcmp(key, "num_queues") == 0) {
       params->num_queues = atoi(value);
     } else if (strcmp(key, "tap_base_name") == 0) {
-      params->tap_base_name = strdup(value);
+      params->tap_base_name = must_strdup(value);
     } else if (strcmp(key, "bridge_name") == 0) {
-      params->bridge_name = strdup(value);
+      params->bridge_name = must_strdup(value);
     } else if (strcmp(key, "mtu") == 0) {
       params->mtu = atoi(value);
     } else if (strcmp(key, "allowed_remote_hosts") == 0) {
-      params->allowed_remote_hosts = strdup(value);
+      params->allowed_remote_hosts = must_strdup(value);
     } else {
       LOG("Unknown key: %s", key);
       return false;
@@ -80,7 +80,7 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
     // New section event, first commit the old tunnel
     if (parse_state->seen_values) {
       if (!params->tunnel_name) {
-        params->tunnel_name = strdup("default");
+        params->tunnel_name = must_strdup("default");
       }
       LOG("Creating tunnel '%s'", params->tunnel_name);
       tunnel* t = tunnel_create(params);
@@ -103,7 +103,7 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
     if (key) {
       LOG_DEBUG("Section: %s", key);
       params->num_queues = parse_state->default_num_queues;
-      params->tunnel_name = strdup(key);
+      params->tunnel_name = must_strdup(key);
     } else {
       // End of file
       LOG_DEBUG("End of file");
