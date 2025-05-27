@@ -131,6 +131,7 @@ static int tunnel_alloc_new_tap(tunnel* t,
     }
   }
   tdev->stats = malloc(sizeof(tunnel_stats) * t->num_queues);
+  memset(tdev->stats, 0, sizeof(tunnel_stats) * t->num_queues);
   t->num_tap_devs++;
   return tap_id;
 }
