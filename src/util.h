@@ -148,17 +148,17 @@ declare_defer_func(pthread_mutex_unlock, pthread_mutex_t*);
 
 // I like this construct for holding a mutex in a scope
 #define pthread_mutex_scope_lock(mutex) \
-  pthread_mutex_t* CONCAT(__to_unlock_, __LINE__) defer(pthread_mutex_unlock) = mutex; \
+  pthread_mutex_t maybe_unused *CONCAT(__to_unlock_, __LINE__) defer(pthread_mutex_unlock) = mutex; \
   pthread_mutex_lock(mutex); \
 
 declare_defer_func(pthread_rwlock_unlock, pthread_rwlock_t*);
 
 #define pthread_rwlock_scope_rdlock(rwlock) \
-  pthread_rwlock_t* CONCAT(__to_unlock_, __LINE__) defer(pthread_rwlock_unlock) = rwlock; \
+  pthread_rwlock_t maybe_unused *CONCAT(__to_unlock_, __LINE__) defer(pthread_rwlock_unlock) = rwlock; \
   pthread_rwlock_rdlock(rwlock); \
 
 #define pthread_rwlock_scope_wrlock(rwlock) \
-  pthread_rwlock_t* CONCAT(__to_unlock_, __LINE__) defer(pthread_rwlock_unlock) = rwlock; \
+  pthread_rwlock_t maybe_unused *CONCAT(__to_unlock_, __LINE__) defer(pthread_rwlock_unlock) = rwlock; \
   pthread_rwlock_wrlock(rwlock);
 
 // The following are wrappers around strdup and asprintf that basically
