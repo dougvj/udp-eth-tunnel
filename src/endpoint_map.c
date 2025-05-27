@@ -103,12 +103,14 @@ endpoint_map* endpoint_map_add(endpoint_map* map,
       perror("endpoint_map_add: realloc");
       return NULL;
     }
+    map = new_map;
   } else {
     if (try_insert(map, addr, port, tap_id)) {
       return map;
     }
   }
-  // Try to regenerate the entire table
+  // Try to regenerate the entire table because we either had to reallocate
+  // or we failed to insert the entry
   endpoint_map_entry* table =
       malloc(sizeof(endpoint_map_entry) * map->alloc_entries);
   if (!table) {
