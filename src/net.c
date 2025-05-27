@@ -200,7 +200,7 @@ bool net_create_udp_sock_fds(const char* bind_iface,
     local_addr.sin6_addr.s6_addr[10] = 0xff;
     local_addr.sin6_addr.s6_addr[11] = 0xff;
     memcpy(&local_addr.sin6_addr.s6_addr[12],
-           &((struct sockaddr_in6*)&ifr.ifr_addr)->sin6_addr,
+           &((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr,
            sizeof(struct in_addr));
   } else if (ifr.ifr_addr.sa_family == AF_INET6) {
     LOG("IOCTL returned IPv6 address, unexpected");
@@ -215,6 +215,14 @@ bool net_create_udp_sock_fds(const char* bind_iface,
     LOG_DEBUG("Bind MTU: %d", bind_mtu);
     *if_mtu = bind_mtu;
   }
+#ifdef DEBUG_ENABLED
+  char ip_str[INET6_ADDRSTRLEN];
+  if (inet_ntop(AF_INET6, &local_addr.sin6_addr, ip_str, sizeof(ip_str)) == NULL) {
+    perror("alloc_udp_socket_client: inet_ntop");
+    return false;
+  }
+  LOG_DEBUG("Binding UDP sockets to %s:%d on interface %s", ip_str, bind_port, bind_iface);
+#endif
   for (int i = 0; i < num_queues; i++) {
     int fd = socket(AF_INET6, SOCK_DGRAM, 0);
     if (fd < 0) {
