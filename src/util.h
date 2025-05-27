@@ -13,6 +13,9 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <pthread.h>
+#ifdef USE_LIBBSD
+#include <bsd/string.h>
+#endif
 
 #define maybe_unused __attribute__((unused))
 
