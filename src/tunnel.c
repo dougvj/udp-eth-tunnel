@@ -603,6 +603,12 @@ tunnel* tunnel_create(tunnel_params* params) {
       return NULL;
     }
   }
+  if (params->post_exec) {
+    LOG("tunnel_create: executing post exec script: %s", params->post_exec);
+    if (system(params->post_exec) != 0) {
+      LOG("tunnel_create: notice: post exec script failed");
+    }
+  }
   return t;
 }
 

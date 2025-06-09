@@ -38,6 +38,8 @@ void reset_tunnel_params(tunnel_params* params) {
   free((void*)params->default_remote_host);
   free((void*)params->bridge_name);
   free((void*)params->tunnel_name);
+  free((void*)params->tap_base_name);
+  free((void*)params->post_exec);
   memset(params, 0, sizeof(tunnel_params));
 }
 
@@ -72,6 +74,8 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
       params->mtu = atoi(value);
     } else if (strcmp(key, "allowed_remote_hosts") == 0) {
       params->allowed_remote_hosts = must_strdup(value);
+    } else if (strcmp(key, "post_exec") == 0) {
+      params->post_exec = must_strdup(value);
     } else {
       LOG("Unknown key: %s", key);
       return false;
@@ -136,6 +140,9 @@ void print_help_and_exit(char* exec_name) {
       "devices to\n"
       "mtu=<mtu> ; The MTU to set for the tap devices, if not specified, the "
       "default is 1500\n"
+      "post_exec=<script> ; A script or command to execute after the tunnel \n"
+      "                   ; is created. This can be used to set up routing, iptables\n"
+      "                   ; rules, etc.\n"
       "```\n"
       "\n"
       "Note that for a single tunnel you can omit the section header\n"

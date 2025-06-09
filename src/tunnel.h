@@ -46,6 +46,9 @@ typedef struct {
       bridge_name;  // The name of the bridge to add the tap devices to
                     // If null, a bridge based on the tunnel name will be
                     // used. If the bridge does not exist, it will be created
+  const char*
+      post_exec;  // A command/script to execute after the tunnel is created.
+                  // This can be used to set up routing, iptables rules, etc.
 } tunnel_params;
 
 typedef struct tunnel tunnel;
