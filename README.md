@@ -29,6 +29,8 @@ letting the kernel handle packet switching.
   configuration based on allowed IPs/subnets or both
 - No dependencies other than Linux and libc with strlcat (libbsd/newer glibc)
 - SIGUSR1 shows tunnel statistics
+- Post-exec hook to run commands after tunnel creation (e.g. configure
+  IP addresses, routing, iptables rules)
 
 ## Pitfalls
 
@@ -105,6 +107,12 @@ tap_base_name = tap ; The base name for the tap interfaces. The default is 'tap'
                   ; names, so multiple tunnels can use the same base name or you
                   ; can simply use the default and all endpoint tap interfaces
                   ; will use tapN
+
+post_exec = /path/to/script.sh ; A command or script to execute after the tunnel
+                  ; is created. This can be used to set up routing, iptables
+                  ; rules, IP addresses on bridge interfaces, etc. The command
+                  ; is run via the system shell. If the command fails, a warning
+                  ; is logged but the tunnel continues to operate.
 ```
 
 ## Examples
@@ -119,18 +127,21 @@ for demonstration purposes.
 bind_iface=lo
 bind_port=1234
 allowed_remote_hosts=127.0.0.1
+post_exec=ip addr add 10.0.0.2/24 dev br-fakeveth1
 
 [fakeveth0]
 bind_iface=lo
 bind_port=1235
 default_endpoint=127.0.0.1:1234
+post_exec=ip addr add 10.0.0.1/24 dev br-fakeveth0
 
 ```
 
-If you set an IP address on the bridge interfaces, you can ping between them.
+The `post_exec` option above automatically assigns IP addresses to the bridge
+interfaces when the tunnel is created. You can also do this manually:
 ```bash
-ip addr add 10.0.0.1/24 dev fakeveth0
-ip addr add 10.0.0.2/24 dev fakeveth1
+ip addr add 10.0.0.1/24 dev br-fakeveth0
+ip addr add 10.0.0.2/24 dev br-fakeveth1
 ping -I fakeveth0 10.0.0.2
 ping -I fakeveth1 10.0.0.2
 ```
