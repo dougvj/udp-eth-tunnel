@@ -96,7 +96,7 @@ endpoint_map* endpoint_map_add(endpoint_map* map,
                             int tap_id) {
   if (map->num_entries >= map->alloc_entries) {
     // We need to expand the table
-    int new_size = map->alloc_entries * 2;
+    size_t new_size = map->alloc_entries * 2;
     endpoint_map* new_map =
         realloc(map, sizeof(endpoint_map) + new_size * sizeof(endpoint_map_entry));
     if (!new_map) {
@@ -104,6 +104,7 @@ endpoint_map* endpoint_map_add(endpoint_map* map,
       return NULL;
     }
     map = new_map;
+    map->alloc_entries = new_size;
   } else {
     if (try_insert(map, addr, port, tap_id)) {
       return map;
@@ -111,32 +112,46 @@ endpoint_map* endpoint_map_add(endpoint_map* map,
   }
   // Try to regenerate the entire table because we either had to reallocate
   // or we failed to insert the entry
+  size_t old_alloc = map->alloc_entries;
   endpoint_map_entry* table =
-      malloc(sizeof(endpoint_map_entry) * map->alloc_entries);
+      malloc(sizeof(endpoint_map_entry) * old_alloc);
   if (!table) {
     perror("endpoint_map_add: malloc");
     return NULL;
   }
   // Copy the entries because we are gonna iterate over them
   memcpy(table, map->entries,
-         sizeof(endpoint_map_entry) * map->alloc_entries);
+         sizeof(endpoint_map_entry) * old_alloc);
   int retries = 0;
   for(;;) {
     // Reset the target table
     memset(map->entries, 0,
           sizeof(endpoint_map_entry) * map->alloc_entries);
     map->num_entries = 0;
-    for (size_t i = 0; i < map->num_entries; i++) {
+    map->nonce_a = rand();
+    map->nonce_b = rand();
+    bool ok = true;
+    for (size_t i = 0; i < old_alloc; i++) {
+      if (!table[i].present) {
+        continue;
+      }
       if (!try_insert(map, &table[i].remote_addr, table[i].port,
                     table[i].tap_id)) {
         // We failed to insert the entry, we need to rehash with new
         // nonces
-        map->nonce_a = rand();
-        map->nonce_b = rand();
+        ok = false;
         retries++;
         break;
       }
     }
+    if (!ok) {
+      continue;
+    }
+    // Now insert the new entry
+    if (try_insert(map, addr, port, tap_id)) {
+      break;
+    }
+    retries++;
   }
   if (retries > 0) {
     LOG("endpoint_map_add: found perfect cuckoo hash after %d retries",

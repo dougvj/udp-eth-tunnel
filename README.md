@@ -80,9 +80,11 @@ bind_iface = wg0 ; The interface to bind to. This is required. The rationale
                  ; all interfaces.
 bind_port = 12345 ; The UDP port to bind to.
 default_endpoint = 127.0.0.1:1234 ; The default endpoint for the tunnel. This
-                                  ; is required if allwed_remote_hosts is not
-                                  ; set. The default endpoint is used to set
-                                  ; a default TAP interface for the tunnel.
+                                  ; is required if allowed_remote_hosts is not
+                                  ; set. The default endpoint is used to create
+                                  ; a TAP interface at startup. Without this
+                                  ; option, TAP interfaces are only created
+                                  ; on demand when a remote peer connects.
 allowed_remote_hosts = 10.0.0.0/8,192.168.0.0/16 ; A comma separated list of
                           ; allowed remote hosts. This is required if the
                           ; default endpoint is not set. This may be a single
@@ -126,7 +128,7 @@ for demonstration purposes.
 [fakeveth1]
 bind_iface=lo
 bind_port=1234
-allowed_remote_hosts=127.0.0.1
+default_endpoint=127.0.0.1:1235
 post_exec=ip addr add 10.0.0.2/24 dev br-fakeveth1
 
 [fakeveth0]
