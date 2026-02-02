@@ -57,7 +57,7 @@ struct tunnel {
   ip_addr_cidr_list* allowed_addr_list;  // The list of allowed remote hosts
   tap_dev* tap_devs;
   int* udp_fds;  // Shared UDP socket fds for each worker (SO_REUSEPORT)
-  int epoll_fd;
+  int* epoll_fds;  // Per-worker epoll fds (one per queue)
   const char* name;           // The name of the tunnel
   const char* tap_base_name;  // The base name of the tap devices for this
                               // tunnel.
@@ -109,7 +109,7 @@ static int tunnel_alloc_new_tap(tunnel* t,
     free(tdev->tap_fds);
     return -1;
   }
-  // Now we add each of them to the epoll fd
+  // Now we add each of them to the corresponding worker's epoll fd
   for (int i = 0; i < t->num_queues; i++) {
     tunnel_epoll_event tev = {
         .is_tap = true,
@@ -124,7 +124,7 @@ static int tunnel_alloc_new_tap(tunnel* t,
         .events = EPOLLIN | EPOLLET | EPOLLONESHOT,
         .data.u64 = tev.u64,
     };
-    if (epoll_ctl(t->epoll_fd, EPOLL_CTL_ADD, tev.fd, &ev) < 0) {
+    if (epoll_ctl(t->epoll_fds[i], EPOLL_CTL_ADD, tev.fd, &ev) < 0) {
       LOG("tunnel_alloc_new_tap: epoll_ctl: %s", strerror(errno));
       free(tdev->tap_fds);
       return -1;
@@ -166,8 +166,12 @@ void tunnel_delete(tunnel* t) {
       free(t->tap_devs[i].stats);
     }
   }
-  if (t->epoll_fd > 0) {
-    close(t->epoll_fd);
+  if (t->epoll_fds) {
+    for (int i = 0; i < t->num_queues; i++) {
+      if (t->epoll_fds[i] > 0) {
+        close(t->epoll_fds[i]);
+      }
+    }
   }
   if (t->map) {
     endpoint_map_delete(t->map);
@@ -177,6 +181,7 @@ void tunnel_delete(tunnel* t) {
   }
   free(t->tap_devs);
   free(t->udp_fds);
+  free(t->epoll_fds);
   free(t->workers);
   free((void*)t->name);
   free((void*)t->tap_base_name);
@@ -204,8 +209,8 @@ static void maybe_unused get_mac_addr(const char* packet,
 
 static void worker_thread(void* _tunnel) {
   tunnel* t = (tunnel*)_tunnel;
-  int epoll_fd = t->epoll_fd;
   int queue_id = atomic_fetch_add(&t->queue_ids, 1) % t->num_queues;
+  int epoll_fd = t->epoll_fds[queue_id];
   int udp_tx_fd = t->udp_fds[queue_id];  // This is the UDP transmit fd
   LOG("%s %i: Started worker thread", t->name, queue_id);
   struct epoll_event ev[EPOLL_MAX_EVENTS];
@@ -456,33 +461,37 @@ void tunnel_print_stats(tunnel* t) {
   }
 }
 
-static int setup_epollfd(tunnel* t) {
-  int epoll_fd = PERROR_IF_NEG(epoll_create1(0));
-  if (epoll_fd < 0) {
-    perror("setup_epollfd: epoll_create1");
-    return -1;
+static bool setup_epoll_fds(tunnel* t) {
+  t->epoll_fds = calloc(t->num_queues, sizeof(int));
+  if (!t->epoll_fds) {
+    perror("setup_epoll_fds: calloc");
+    return false;
   }
-  struct epoll_event ev = {
-      .events = EPOLLIN | EPOLLET | EPOLLONESHOT,
-  };
-  // Add the UDP sockets to the epoll fd
   for (int i = 0; i < t->num_queues; i++) {
+    int epoll_fd = PERROR_IF_NEG(epoll_create1(0));
+    if (epoll_fd < 0) {
+      perror("setup_epoll_fds: epoll_create1");
+      return false;
+    }
+    t->epoll_fds[i] = epoll_fd;
+    // Each worker's epoll only monitors its own UDP socket
     int fd = t->udp_fds[i];
+    if (!net_set_nonblocking(fd)) {
+      return false;
+    }
     tunnel_epoll_event tev = {
         .is_tap = false,
         .fd = fd,
     };
-    ev.data.u64 = tev.u64;
+    struct epoll_event ev = {
+        .events = EPOLLIN | EPOLLET | EPOLLONESHOT,
+        .data.u64 = tev.u64,
+    };
     if (PERROR_IF_NEG(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev)) < 0) {
-      close(epoll_fd);
-      return -1;
-    }
-    if (!net_set_nonblocking(fd)) {
-      close(epoll_fd);
-      return -1;
+      return false;
     }
   }
-  return epoll_fd;
+  return true;
 }
 
 tunnel* tunnel_create(tunnel_params* params) {
@@ -535,8 +544,7 @@ tunnel* tunnel_create(tunnel_params* params) {
   } else {
     must_asprintf((char**)&t->bridge_name, "br-%s", t->name);
   }
-  t->epoll_fd = setup_epollfd(t);
-  if (t->epoll_fd < 0) {
+  if (!setup_epoll_fds(t)) {
     tunnel_delete(t);
     return NULL;
   }
