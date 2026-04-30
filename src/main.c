@@ -56,7 +56,7 @@ bool config_parse_event(const char* key, const char* value, void* user_data) {
       params->bind_port = atoi(value);
     } else if (strcmp(key, "default_endpoint") == 0) {
       params->default_remote_host = must_strdup(value);
-      char * colon = strchr(params->default_remote_host, ':');
+      char * colon = (char*)strchr(params->default_remote_host, ':');
       if (colon != NULL) {
         *colon = '\0';
         params->default_remote_port = atoi(colon + 1);

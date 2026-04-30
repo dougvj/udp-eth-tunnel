@@ -236,6 +236,20 @@ bool net_create_udp_sock_fds(const char* bind_iface,
       close(fd);
       return false;
     }
+    // Enlarge UDP send/recv buffers so brief bursts (TLS handshakes,
+    // parallel HTTP, sync uploads) don't overrun the per-socket queue and
+    // get dropped in the EAGAIN path in tunnel.c. SO_SNDBUFFORCE bypasses
+    // net.core.wmem_max but needs CAP_NET_ADMIN; fall back to SO_SNDBUF if
+    // the daemon is run unprivileged.
+    int bufsz = 4 * 1024 * 1024;
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUFFORCE, &bufsz, sizeof(bufsz)) < 0
+        && setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsz, sizeof(bufsz)) < 0) {
+      perror("alloc_udp_socket_client: setsockopt SO_SNDBUF");
+    }
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUFFORCE, &bufsz, sizeof(bufsz)) < 0
+        && setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &bufsz, sizeof(bufsz)) < 0) {
+      perror("alloc_udp_socket_client: setsockopt SO_RCVBUF");
+    }
     if (bind(fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
       perror("alloc_udp_socket_client: bind");
       close(fd);
