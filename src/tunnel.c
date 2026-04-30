@@ -219,11 +219,9 @@ static void worker_thread(void* _tunnel) {
   char buf[t->mtu * 2];
   int max_packet_size = t->mtu + 18;  // 18 bytes for the MAC header with
                                       // VLAN tag
-  while ((num_events = epoll_wait(epoll_fd, ev, EPOLL_MAX_EVENTS, -1)) > 0) {
-    if (num_events < 0) {
-      perror("worker_thread: epoll_wait");
-      break;
-    }
+  while (((num_events = epoll_wait(epoll_fd, ev, EPOLL_MAX_EVENTS, -1)) >= 0) ||
+         errno == EINTR) {
+    if (num_events <= 0) continue;
     pthread_rwlock_scope_rdlock(&t->mutex);
     for (int i = 0; i < num_events; i++) {
       tunnel_epoll_event tev = {
@@ -380,6 +378,8 @@ static void worker_thread(void* _tunnel) {
       }
     }
   }
+  perror("worker_thread: epoll_wait");
+  LOG("%s %i: worker thread exiting", t->name, queue_id);
 }
 
 static void time_since_human_str(char* buf, size_t len, time_t diff) {
